@@ -38,4 +38,4 @@ The dataset is the public "Give Me Some Credit" dataset, originally released as 
 
 ## Notebook
 
-The full analysis from data loading through model training and export is available in `credit_risk_project_clean.ipynb`.
+The full analysis from data loading through model training and export is available in `credit_risk_project.ipynb`.
