@@ -21,12 +21,12 @@ The goal is to predict whether a borrower is likely to be seriously late on paym
 ### Model Overview
 Shows total borrowers, actual versus predicted default rate, default rate by age group, and a risk segment breakdown. Confirms the model is working sensibly: borrowers the model marks as High risk genuinely default more often in the real data.
 
-![Model Overview Dashboard](Model Overview.png)
+![Model Overview Dashboard](<Model Overview.png>)
 
 ### Threshold Decision Analysis
 An interactive page where you select a single decision threshold from a list. The estimated financial cost of missed defaults updates instantly for that cutoff, while the full trade off curve stays visible for context.
 
-![Threshold Decision Analysis Dashboard](threshold_decision_analysis.png)
+![Threshold Decision Analysis Dashboard](<Threshold Decision Analysis.png>)
 
 ## Tools and Skills
 
