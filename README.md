@@ -1,65 +1,79 @@
 # Credit Risk Prediction Project
 
-A portfolio project that predicts which borrowers are likely to default on a loan and turns those predictions into a lending decision. The pipeline runs from raw data to an interactive dashboard, using SQL, Python and Power BI.
+This project predicts which borrowers are likely to default on a loan, and then uses those predictions to help a lender decide who to approve. I used SQL to clean the data, Python to build the model, and Power BI to show the results.
 
 ## Key Results
 
-| | |
-|---|---|
-| Model | Random Forest, AUC 0.87 (Logistic Regression baseline: 0.82) |
-| Optimal decision cutoff | 0.60, chosen by minimising total business cost |
-| Cost reduction | 41% lower total cost than approving every applicant |
-| Defaults caught at optimal cutoff | 61%, while rejecting under 10% of good customers |
-| Risk concentration | High risk segment is 13% of borrowers but holds 61% of all defaults |
+* The model ranks risky borrowers well: AUC of 0.87 (a simple baseline model scored 0.82).
+* The best decision cutoff is 0.60. At that point, total cost is 41% lower than approving everyone.
+* The model catches 61% of defaults while rejecting fewer than 10% of good customers.
+* The high risk group is only 13% of borrowers, but contains 61% of all defaults.
 
 ## The Problem
 
-A lender has to decide which applicants to approve, and both kinds of mistakes cost money. Approving a borrower who later defaults leads to a loss on the loan. Rejecting a borrower who would have paid back means lost interest income. The goal of this project is not only to predict default, but to find the decision rule that keeps the total cost as low as possible.
+A lender can make two kinds of mistakes:
 
-The target is whether a borrower becomes 90 or more days late on a payment within two years, using a public dataset of 150,000 borrowers.
+* **Approving someone who doesn't pay back** → the lender loses the loan.
+* **Rejecting someone who would have paid back** → the lender loses the interest it could have earned.
+
+So the goal is not just to predict default, but to find the decision rule that costs the lender the least money.
+
+The dataset has 150,000 borrowers. "Default" means being 90 or more days late on a payment within two years.
 
 ## What I Did
 
-**Data cleaning (SQL):** I loaded the raw data into a SQLite database and used SQL queries to check every column for missing values and anomalies. Monthly income was missing for about 20% of borrowers. The late payment columns contained the values 96 and 98, which turned out to be placeholder codes rather than real counts, so I converted them to null. I also removed borrowers under 18 or over 100, since those records are not realistic for a lending dataset.
+**1. Cleaned the data with SQL**
+I loaded the data into a SQLite database and checked every column for problems:
+* Monthly income was missing for about 20% of borrowers.
+* Some late payment columns had the values 96 and 98. These were codes, not real counts, so I removed them.
+* I removed borrowers younger than 18 or older than 100.
 
-**Feature engineering and modelling (Python, scikit learn):** Instead of filling missing income with an average, I added a flag column `income_is_missing` and filled the income itself with zero, so the model knows both the value and the fact that it was missing. I engineered three new features: total number of late payments across all time windows, a flag for whether the borrower was ever 90 or more days late, and monthly income per dependent. Both models used balanced class weights to handle the imbalanced target (about 7% defaults). The Random Forest reached an AUC of 0.87 on the test set, compared with 0.82 for the Logistic Regression baseline.
+**2. Prepared the features in Python**
+* For missing income, I added a column that says "income was missing", so the model can learn from that too.
+* I created three new features: total number of late payments, whether the borrower was ever 90+ days late, and income per family member.
 
-**Business decision layer:** Instead of using the default cutoff of 0.5, I tested every cutoff from 0.05 to 0.95 and assigned a cost to both types of error:
+**3. Built and compared two models**
+* Logistic Regression (simple baseline): AUC 0.82
+* Random Forest (final model): AUC 0.87
 
-* Missed default (approved borrower who defaults): assumed loss of 1,000
-* Rejected good customer: assumed lost margin of 150
+Only about 7% of borrowers default, so I told both models to give extra weight to the default cases. Otherwise they would mostly learn to predict "no default".
 
-The total cost curve has a clear minimum at a cutoff of 0.60, and stays fairly flat between 0.55 and 0.65, so the choice is stable. At that point the model reduces total cost by 41% compared with approving everyone, and by about 5% compared with the default cutoff of 0.5. The cost figures are illustrative; a lender would plug in its own loss and margin numbers.
+**4. Chose the best decision cutoff**
+The model gives each borrower a risk score. The lender must decide above which score to reject. Instead of using the standard cutoff of 0.5, I tested every cutoff and calculated the total cost, assuming:
+* 1,000 lost for each approved borrower who defaults
+* 150 lost for each good customer who is rejected
 
-**Dashboard (Power BI, DAX):** A two page interactive report built on the test set (37,497 borrowers not used for training), so every number reflects performance on unseen data.
+The lowest total cost is at a cutoff of **0.60**. These cost numbers are examples; a real lender would use its own.
+
+**5. Built a Power BI dashboard**
+All numbers in the dashboard come from the test set: 37,497 borrowers the model never saw during training.
 
 ## Dashboard
 
-### Model Overview
-Validates the model in business terms. Actual default rates rise sharply with predicted risk: high risk borrowers default 26 times more often than low risk ones (31.6% vs 1.2%). The high risk segment is only 13% of borrowers but contains 61% of all defaults. Default risk also falls steadily with age.
+### Page 1: Model Overview
+Checks if the model makes sense. Borrowers the model marks as high risk really do default much more often: 31.6% compared with 1.2% for low risk borrowers. Younger borrowers also default more often than older ones.
 
 ![Model Overview](model_overview.png)
 
-### Threshold Decision Analysis
-Shows the trade off between missed defaults and rejected good customers, with the optimal cutoff marked. A user can select any cutoff and immediately see its total cost, the extra cost compared with the optimum, and the share of defaults caught.
+### Page 2: Threshold Decision Analysis
+Shows how the cost changes with the cutoff. A strict cutoff rejects too many good customers. A loose cutoff lets too many defaulters through. The black line shows the total cost, with its lowest point at 0.60. You can pick any cutoff and see what it would cost.
 
 ![Threshold Decision Analysis](threshold_decision_analysis.png)
 
-**DAX techniques used:** calculated columns for risk segments and age groups (with custom sort order), `CALCULATE` with `ALL` to compute lift against the overall default rate, `VAR` and `FILTER` to find the optimal cutoff, `SELECTEDVALUE` for the interactive cutoff selection, and edited visual interactions so the trade off curve stays visible while the slicer drives the KPI cards.
-
 ## Limitations and Next Steps
 
-* **Probability calibration:** balanced class weights inflate predicted probabilities, so the scores should be read as a risk ranking rather than true default probabilities. Calibration would fix this and shift the optimal cutoff lower.
-* **Threshold selection:** the cutoff was chosen on the test set; a separate validation set or cross validation would give a more robust estimate.
-* **Fairness and regulation:** the model uses age. Credit scoring is classified as high risk under the EU AI Act, so a production model would need fairness checks across groups, documentation, and explainability (for example SHAP values).
-* **Dashboard:** replace the fixed cost assumptions with What if parameters so a lender can enter its own figures.
-* **Data:** the dataset is from 2011 and one market; a real model would need retraining and drift monitoring.
+* The cost numbers are assumptions. A lender would replace them with real figures.
+* The model's scores show who is riskier than whom, but they are not exact probabilities. Calibrating the model would fix that.
+* The model uses age. In the EU, credit scoring is seen as high risk under the AI Act, so a real model would need checks to make sure it treats groups fairly.
+* The data is from 2011, so a real model would need newer data and regular retraining.
 
-## Tools and Skills
+## Tools
 
-SQL, SQLite, Python (pandas, NumPy, scikit learn), Power BI, DAX, Power Query, predictive modelling, feature engineering, data cleaning, cost based decision analysis, dashboard design.
+SQL (SQLite), Python (pandas, NumPy, scikit learn), Power BI
 
 ## How to Run
 
 1. Download `cs-training.csv` from the [Give Me Some Credit](https://www.kaggle.com/c/GiveMeSomeCredit/data) competition on Kaggle and rename it to `credit_risk_training.csv`.
-2. Install the requirements: `pip
+2. Install the packages: `pip install pandas numpy scikit-learn`
+3. Run `credit_risk_project.ipynb`. It cleans the data, trains the models, and creates the two CSV files used in Power BI.
+4. 
