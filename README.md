@@ -70,10 +70,3 @@ Shows how the cost changes with the cutoff. A strict cutoff rejects too many goo
 ## Tools
 
 SQL (SQLite), Python (pandas, NumPy, scikit learn), Power BI
-
-## How to Run
-
-1. Download `cs-training.csv` from the [Give Me Some Credit](https://www.kaggle.com/c/GiveMeSomeCredit/data) competition on Kaggle and rename it to `credit_risk_training.csv`.
-2. Install the packages: `pip install pandas numpy scikit-learn`
-3. Run `credit_risk_project.ipynb`. It cleans the data, trains the models, and creates the two CSV files used in Power BI.
-4. 
